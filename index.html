@@ -8,15 +8,16 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 :root {
-  --rel:#2563eb; --spo:#16a34a; --acc:#f59e0b; --danger:#ef4444;
+  --rel:#2563eb; --spo:#16a34a; --acc:#f59e0b; --merc:#0ea5e9; --bmw:#dc2626; --danger:#ef4444;
   --border:#e4e4e7; --surf:#f7f7f8; --text:#18181b; --muted:#71717a; --r:14px;
 }
 body { font-family:-apple-system,'Helvetica Neue',sans-serif; background:#fff; color:var(--text); }
-header { position:sticky; top:0; z-index:100; background:rgba(255,255,255,.95); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:12px 16px 0; }
+header { position:sticky; top:0; z-index:100; background:rgba(255,255,255,.95); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:12px 12px 0; }
 .title { font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
-.tabs { display:flex; margin-top:10px; }
-.tab { flex:1; text-align:center; padding:10px 2px; font-size:14px; font-weight:600; cursor:pointer; border-bottom:2.5px solid transparent; color:var(--muted); transition:.15s; user-select:none; }
+.tabs { display:flex; margin-top:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.tab { flex:0 0 auto; text-align:center; padding:10px 12px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:2.5px solid transparent; color:var(--muted); transition:.15s; user-select:none; white-space:nowrap; }
 .tab.r{border-color:var(--rel);color:var(--rel)} .tab.s{border-color:var(--spo);color:var(--spo)} .tab.c{border-color:var(--acc);color:var(--acc)}
+.tab.m{border-color:var(--merc);color:var(--merc)} .tab.b{border-color:var(--bmw);color:var(--bmw)}
 main { padding:16px; max-width:480px; margin:0 auto; }
 .screen{display:none} .screen.active{display:block}
 .card { background:var(--surf); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:12px; }
@@ -33,6 +34,7 @@ input:focus{outline:none;border-color:var(--rel)}
 .btn { width:100%; padding:14px; border-radius:12px; font-size:16px; font-weight:700; border:none; cursor:pointer; font-family:inherit; transition:transform .1s; margin-bottom:8px; }
 .btn:active{transform:scale(.97)}
 .btn-rel{background:var(--rel);color:#fff} .btn-spo{background:var(--spo);color:#fff} .btn-acc{background:var(--acc);color:#fff}
+.btn-merc{background:var(--merc);color:#fff} .btn-bmw{background:var(--bmw);color:#fff}
 .note{font-size:12px;color:var(--muted);text-align:center;margin-top:2px}
 .note a{color:var(--rel)}
 .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:#18181b; color:#fff; padding:12px 22px; border-radius:24px; font-size:14px; font-weight:500; box-shadow:0 4px 20px rgba(0,0,0,.2); transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s; opacity:0; z-index:999; white-space:nowrap; max-width:90vw; text-align:center; }
@@ -52,6 +54,8 @@ canvas{max-height:200px}
   <div class="tabs">
     <div class="tab" id="tab-rel" onclick="go('rel')">📍 Rellingen</div>
     <div class="tab" id="tab-spo" onclick="go('spo')">🏡 SPO</div>
+    <div class="tab" id="tab-merc" onclick="go('merc')">🚗 Mercedes</div>
+    <div class="tab" id="tab-bmw" onclick="go('bmw')">🚙 BMW</div>
     <div class="tab" id="tab-chart" onclick="go('chart')">📊 Auswertung</div>
   </div>
 </header>
@@ -95,9 +99,32 @@ canvas{max-height:200px}
   <button class="btn btn-spo" onclick="saveSPO()">💾 SPO speichern</button>
   <div class="note"><a href="https://docs.google.com/spreadsheets/d/1-F2w-il9k9W5bayNn_FDr6IfUVghgjz4BgCMrNU4LfU" target="_blank">→ Google Tabelle öffnen</a></div>
 </div>
+<div class="screen" id="screen-merc">
+  <div class="card" style="margin-top:4px">
+    <div class="ch"><div class="dot" style="background:var(--merc)"></div><div class="ct">🚗 Mercedes</div></div>
+    <div class="field"><label>Datum</label><input type="date" id="merc-date"></div>
+    <div class="field"><label>km-Stand</label><div class="iw"><input type="number" id="merc-km" placeholder="0" step="1" min="0"><span class="unit">km</span></div></div>
+  </div>
+  <button class="btn btn-merc" onclick="saveMerc()">💾 Mercedes speichern</button>
+  <div class="note"><a href="https://docs.google.com/spreadsheets/d/1-F2w-il9k9W5bayNn_FDr6IfUVghgjz4BgCMrNU4LfU" target="_blank">→ Google Tabelle öffnen</a></div>
+</div>
+<div class="screen" id="screen-bmw">
+  <div class="card" style="margin-top:4px">
+    <div class="ch"><div class="dot" style="background:var(--bmw)"></div><div class="ct">🚙 BMW</div></div>
+    <div class="field"><label>Datum</label><input type="date" id="bmw-date"></div>
+    <div class="field"><label>km-Stand</label><div class="iw"><input type="number" id="bmw-km" placeholder="0" step="1" min="0"><span class="unit">km</span></div></div>
+  </div>
+  <button class="btn btn-bmw" onclick="saveBmw()">💾 BMW speichern</button>
+  <div class="note"><a href="https://docs.google.com/spreadsheets/d/1-F2w-il9k9W5bayNn_FDr6IfUVghgjz4BgCMrNU4LfU" target="_blank">→ Google Tabelle öffnen</a></div>
+</div>
 <div class="screen" id="screen-chart">
   <div class="filter-row" style="margin-top:4px">
-    <select id="chart-loc" onchange="updateYears()"><option value="Rellingen">📍 Rellingen</option><option value="SPO">🏡 SPO</option></select>
+    <select id="chart-loc" onchange="updateYears()">
+      <option value="Rellingen">📍 Rellingen</option>
+      <option value="SPO">🏡 SPO</option>
+      <option value="Mercedes">🚗 Mercedes</option>
+      <option value="BMW">🚙 BMW</option>
+    </select>
     <select id="chart-year"><option value="all">Alle Jahre</option></select>
   </div>
   <button class="btn btn-acc" onclick="loadAndRender()" style="margin-bottom:12px">🔄 Daten laden</button>
@@ -107,19 +134,22 @@ canvas{max-height:200px}
 <div class="toast" id="toast"></div>
 <script>
 const GAS = 'https://script.google.com/macros/s/AKfycbzDXXFt49EYltwqjHyg-KCTWOxxo_CIbCAZkeoCY2VZ6hjNpwSdztAV-ZD_IfZ9nweVng/exec';
-let cachedData = {Rellingen:[], SPO:[]};
+let cachedData = {Rellingen:[], SPO:[], Mercedes:[], BMW:[]};
 let charts = [];
 document.getElementById('rel-date').value = today();
 document.getElementById('spo-date').value = today();
+document.getElementById('merc-date').value = today();
+document.getElementById('bmw-date').value = today();
 go('rel');
 function today() { return new Date().toISOString().slice(0,10); }
 function go(t) {
-  ['rel','spo','chart'].forEach(x => {
+  ['rel','spo','merc','bmw','chart'].forEach(x => {
     document.getElementById('screen-'+x).classList.remove('active');
     document.getElementById('tab-'+x).className = 'tab';
   });
   document.getElementById('screen-'+t).classList.add('active');
-  document.getElementById('tab-'+t).classList.add(t==='rel'?'r':t==='spo'?'s':'c');
+  const cls = {rel:'r',spo:'s',merc:'m',bmw:'b',chart:'c'}[t];
+  document.getElementById('tab-'+t).classList.add(cls);
 }
 function toast(msg, type='') {
   const el = document.getElementById('toast');
@@ -170,6 +200,28 @@ async function saveSPO() {
     document.getElementById('spo-date').value = today();
   } catch(e) { toast('Fehler: ' + e.message, 'err'); }
 }
+async function saveMerc() {
+  const date=document.getElementById('merc-date').value, km=document.getElementById('merc-km').value;
+  if (!date||!km) { toast('Bitte Datum und km-Stand eingeben','err'); return; }
+  toast('Speichern…');
+  try {
+    await gasPost({sheet:'Mercedes', row:[date,+km]});
+    toast('✓ Mercedes gespeichert!');
+    document.getElementById('merc-km').value='';
+    document.getElementById('merc-date').value = today();
+  } catch(e) { toast('Fehler: ' + e.message, 'err'); }
+}
+async function saveBmw() {
+  const date=document.getElementById('bmw-date').value, km=document.getElementById('bmw-km').value;
+  if (!date||!km) { toast('Bitte Datum und km-Stand eingeben','err'); return; }
+  toast('Speichern…');
+  try {
+    await gasPost({sheet:'BMW', row:[date,+km]});
+    toast('✓ BMW gespeichert!');
+    document.getElementById('bmw-km').value='';
+    document.getElementById('bmw-date').value = today();
+  } catch(e) { toast('Fehler: ' + e.message, 'err'); }
+}
 async function loadAndRender() {
   document.getElementById('chart-area').innerHTML = '<div class="hint">Lade Daten…</div>';
   const loc = document.getElementById('chart-loc').value;
@@ -188,9 +240,12 @@ function renderCharts() {
   const raw=(cachedData[loc]||[]).sort((a,b)=>String(a[0])>String(b[0])?1:-1);
   const rows=year==='all'?raw:raw.filter(r=>String(r[0]).startsWith(year));
   if (rows.length<2){document.getElementById('chart-area').innerHTML='<div class="hint">Noch keine Daten (min. 2 Ablesungen)</div>';return;}
-  const specs=loc==='Rellingen'?[{t:'Wasser',col:1,u:'m³',c:'#2563eb'},{t:'Allgstrom',col:2,u:'kWh',c:'#7c3aed'},{t:'Wärmepumpe 1',col:3,u:'kWh',c:'#ea580c'},{t:'Wärmepumpe 2',col:4,u:'kWh',c:'#d97706'},{t:'Wärmepumpe 3',col:5,u:'kWh',c:'#16a34a'}]:[{t:'Strom',col:1,u:'kWh',c:'#16a34a'},{t:'Warmwasser',col:2,u:'m³',c:'#f59e0b'},{t:'Kaltwasser',col:3,u:'m³',c:'#0ea5e9'}];
+  const specs=loc==='Rellingen'?[{t:'Wasser',col:1,u:'m³',c:'#2563eb'},{t:'Allgstrom',col:2,u:'kWh',c:'#7c3aed'},{t:'Wärmepumpe 1',col:3,u:'kWh',c:'#ea580c'},{t:'Wärmepumpe 2',col:4,u:'kWh',c:'#d97706'},{t:'Wärmepumpe 3',col:5,u:'kWh',c:'#16a34a'}]
+    :loc==='SPO'?[{t:'Strom',col:1,u:'kWh',c:'#16a34a'},{t:'Warmwasser',col:2,u:'m³',c:'#f59e0b'},{t:'Kaltwasser',col:3,u:'m³',c:'#0ea5e9'}]
+    :loc==='Mercedes'?[{t:'km-Stand',col:1,u:'km',c:'#0ea5e9'}]
+    :[{t:'km-Stand',col:1,u:'km',c:'#dc2626'}];
   let html='';
-  specs.forEach((_,i)=>{html+=`<div class="chart-card"><div class="ct">${specs[i].t} – Zählerstand</div><div class="csub">${specs[i].u}</div><canvas id="ca${i}"></canvas></div><div class="chart-card"><div class="ct">${specs[i].t} – Verbrauch</div><div class="csub">pro Ablesung (${specs[i].u})</div><canvas id="cb${i}"></canvas></div>`;});
+  specs.forEach((_,i)=>{html+=`<div class="chart-card"><div class="ct">${specs[i].t} – Verlauf</div><div class="csub">${specs[i].u}</div><canvas id="ca${i}"></canvas></div><div class="chart-card"><div class="ct">${specs[i].t} – ${loc==='Mercedes'||loc==='BMW'?'gefahrene km':'Verbrauch'}</div><div class="csub">pro Ablesung (${specs[i].u})</div><canvas id="cb${i}"></canvas></div>`;});
   if(loc==='Rellingen')html+=`<div class="chart-card"><div class="ct">Gesamtstrom</div><div class="csub">Allg+WP1+2+3 (kWh)</div><canvas id="ctotal"></canvas></div>`;
   document.getElementById('chart-area').innerHTML=html;
   const opts={responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:45,font:{size:10}}},y:{ticks:{font:{size:10}}}}};
