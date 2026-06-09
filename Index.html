@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Betriebskosten</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --rel:#2563eb; --spo:#16a34a; --acc:#f59e0b; --danger:#ef4444;
+  --border:#e4e4e7; --surf:#f7f7f8; --text:#18181b; --muted:#71717a; --r:14px;
+}
+body { font-family:-apple-system,'Helvetica Neue',sans-serif; background:#fff; color:var(--text); }
+header {
+  position:sticky; top:0; z-index:100;
+  background:rgba(255,255,255,.95); backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border); padding:12px 16px 0;
+}
+.title { font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
+.tabs { display:flex; margin-top:10px; }
+.tab { flex:1; text-align:center; padding:10px 2px; font-size:14px; font-weight:600; cursor:pointer; border-bottom:2.5px solid transparent; color:var(--muted); transition:.15s; user-select:none; }
+.tab.r{border-color:var(--rel);color:var(--rel)} .tab.s{border-color:var(--spo);color:var(--spo)} .tab.c{border-color:var(--acc);color:var(--acc)}
+main { padding:16px; max-width:480px; margin:0 auto; }
+.screen{display:none} .screen.active{display:block}
+.card { background:var(--surf); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:12px; }
+.ch { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.dot { width:9px; height:9px; border-radius:50%; }
+.ct { font-size:15px; font-weight:700; }
+.field { margin-bottom:10px; }
+.field:last-child{margin-bottom:0}
+label { display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; letter-spacing:.05em; text-transform:uppercase; }
+.iw { position:relative; }
+input[type=number], input[type=date] { width:100%; padding:11px 44px 11px 13px; border:1.5px solid var(--border); border-radius:10px; font-size:16px; background:#fff; color:var(--text); -webkit-appearance:none; font-family:inherit; }
+input:focus{outline:none;border-color:var(--rel)}
+.unit { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--muted); pointer-events:none; }
+.btn { width:100%; padding:14px; border-radius:12px; font-size:16px; font-weight:700; border:none; cursor:pointer; font-family:inherit; transition:transform .1s; margin-bottom:8px; }
+.btn:active{transform:scale(.97)}
+.btn-rel{background:var(--rel);color:#fff} .btn-spo{background:var(--spo);color:#fff} .btn-acc{background:var(--acc);color:#fff}
+.note{font-size:12px;color:var(--muted);text-align:center;margin-top:2px}
+.note a{color:var(--rel)}
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:#18181b; color:#fff; padding:12px 22px; border-radius:24px; font-size:14px; font-weight:500; box-shadow:0 4px 20px rgba(0,0,0,.2); transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s; opacity:0; z-index:999; white-space:nowrap; max-width:90vw; text-align:center; }
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.err{background:var(--danger)} .toast.warn{background:var(--acc)}
+.chart-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.chart-card .ct{font-size:14px;margin-bottom:2px} .csub{font-size:12px;color:var(--muted);margin-bottom:10px}
+canvas{max-height:200px}
+.filter-row{display:flex;gap:8px;margin-bottom:12px}
+.filter-row select{flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:#fff;-webkit-appearance:none;font-family:inherit}
+.hint{text-align:center;color:var(--muted);font-size:14px;padding:40px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="title">⚡ Betriebskosten</div>
+  <div class="tabs">
+    <div class="tab" id="tab-rel" onclick="go('rel')">📍 Rellingen</div>
+    <div class="tab" id="tab-spo" onclick="go('spo')">🏡 SPO</div>
+    <div class="tab" id="tab-chart" onclick="go('chart')">📊 Auswertung</div>
+  </div>
+</header>
+<main>
+
+<!-- RELLINGEN -->
+<div class="screen" id="screen-rel">
+  <div class="card" style="margin-top:4px">
+    <div class="ch"><div class="dot" style="background:var(--rel)"></div><div class="ct">Ablesedatum</div></div>
+    <div class="field"><input type="date" id="rel-date"></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="dot" style="background:var(--rel)"></div><div class="ct">Wasser</div></div>
+    <div class="field"><label>Zählerstand</label><div class="iw"><input type="number" id="rel-wasser" placeholder="0.000" step="0.001" min="0"><span class="unit">m³</span></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="dot" style="background:var(--rel)"></div><div class="ct">Allgemeinstrom</div></div>
+    <div class="field"><label>Zählerstand</label><div class="iw"><input type="number" id="rel-allg" placeholder="0.0" step="0.1" min="0"><span class="unit">kWh</span></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="dot" style="background:var(--rel)"></div><div class="ct">Wärmepumpenstrom</div></div>
+    <div class="field"><label>Zähler 1</label><div class="iw"><input type="number" id="rel-wp1" placeholder="0.0" step="0.1" min="0"><span class="unit">kWh</span></div></div>
+    <div class="field"><label>Zähler 2</label><div class="iw"><input type="number" id="rel-wp2" placeholder="0.0" step="0.1" min="0"><span class="unit">kWh</span></div></div>
+    <div class="field"><label>Zähler 3</label><div class="iw"><input type="number" id="rel-wp3" placeholder="0.0" step="0.1" min="0"><span class="unit">kWh</span></div></div>
+  </div>
+  <button class="btn btn-rel" onclick="saveRellingen()">💾 Rellingen speichern</button>
+  <div class="note"><a href="https://docs.google.com/spreadsheets/d/1-F2w-il9k9W5bayNn_FDr6IfUVghgjz4BgCMrNU4LfU" target="_blank">→ Google Tabelle öffnen</a></div>
+</div>
+
+<!-- SPO -->
+<div class="screen" id="screen-spo">
+  <div class="card" style="margin-top:4px">
+    <div class="ch"><div class="dot" style="background:var(--spo)"></div><div class="ct">Ablesedatum</div></div>
+    <div class="field"><input type="date" id="spo-date"></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="dot" style="background:var(--spo)"></div><div class="ct">Strom</div></div>
+    <div class="field"><label>Zählerstand</label><div class="iw"><input type="number" id="spo-strom" placeholder="0.0" step="0.1" min="0"><span class="unit">kWh</span></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="dot" style="background:var(--spo)"></div><div class="ct">Wasser</div></div>
+    <div class="field"><label>Warmwasser</label><div class="iw"><input type="number" id="spo-warm" placeholder="0.000" step="0.001" min="0"><span class="unit">m³</span></div></div>
+    <div class="field"><label>Kaltwasser</label><div class="iw"><input type="number" id="spo-kalt" placeholder="0.000" step="0.001" min="0"><span class="unit">m³</span></div></div>
+  </div>
+  <button class="btn btn-spo" onclick="saveSPO()">💾 SPO speichern</button>
+  <div class="note"><a href="https://docs.google.com/spreadsheets/d/1-F2w-il9k9W5bayNn_FDr6IfUVghgjz4BgCMrNU4LfU" target="_blank">→ Google Tabelle öffnen</a></div>
+</div>
+
+<!-- AUSWERTUNG -->
+<div class="screen" id="screen-chart">
+  <div class="filter-row" style="margin-top:4px">
+    <select id="chart-loc" onchange="updateYears()"><option value="Rellingen">📍 Rellingen</option><option value="SPO">🏡 SPO</option></select>
+    <select id="chart-year"><option value="all">Alle Jahre</option></select>
+  </div>
+  <button class="btn btn-acc" onclick="loadAndRender()" style="margin-bottom:12px">🔄 Daten laden</button>
+  <div id="chart-area"><div class="hint">Auf „Daten laden" tippen</div></div>
+</div>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Konfiguration ─────────────────────────────────────────────────────────────
+// GAS Web-App URL hier fest eingetragen:
+const GAS = 'https://script.google.com/macros/s/AKfycbyE07v1ppNtNTdGkoBiLAnmaj6JD0DbuzcNkLtClzk5OxgZMb_-VJSL2thiQ9JlUQexFA/exec';
+
+let cachedData = {Rellingen:[], SPO:[]};
+let charts = [];
+
+// Init
+document.getElementById('rel-date').value = today();
+document.getElementById('spo-date').value = today();
+go('rel');
+
+function today() { return new Date().toISOString().slice(0,10); }
+
+function go(t) {
+  ['rel','spo','chart'].forEach(x => {
+    document.getElementById('screen-'+x).classList.remove('active');
+    document.getElementById('tab-'+x).className = 'tab';
+  });
+  document.getElementById('screen-'+t).classList.add('active');
+  document.getElementById('tab-'+t).classList.add(t==='rel'?'r':t==='spo'?'s':'c');
+}
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type?' '+type:'');
+  clearTimeout(window._tt);
+  window._tt = setTimeout(()=>el.className='toast', 3500);
+}
+
+// ── GAS Kommunikation via fetch POST ─────────────────────────────────────────
+// Funktioniert wenn die Datei lokal in Safari geöffnet wird (kein iFrame)
+async function gasPost(payload) {
+  try {
+    const resp = await fetch(GAS, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const text = await resp.text();
+    console.log('GAS response:', text);
+    try { return JSON.parse(text); } catch { return {ok: text.includes('OK')}; }
+  } catch(e) {
+    console.error('GAS POST error:', e);
+    throw e;
+  }
+}
+
+async function gasGet(params) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const resp = await fetch(GAS + '?' + qs);
+    const text = await resp.text();
+    try { return JSON.parse(text); } catch { return []; }
+  } catch(e) {
+    console.error('GAS GET error:', e);
+    return [];
+  }
+}
+
+// ── Save Rellingen ────────────────────────────────────────────────────────────
+async function saveRellingen() {
+  const date   = document.getElementById('rel-date').value;
+  const wasser = document.getElementById('rel-wasser').value;
+  const allg   = document.getElementById('rel-allg').value;
+  const wp1    = document.getElementById('rel-wp1').value;
+  const wp2    = document.getElementById('rel-wp2').value;
+  const wp3    = document.getElementById('rel-wp3').value;
+  if (!date||!wasser||!allg||!wp1||!wp2||!wp3) { toast('Bitte alle Felder ausfüllen','err'); return; }
+  toast('Speichern…');
+  try {
+    const r = await gasPost({sheet:'Rellingen', row:[date,+wasser,+allg,+wp1,+wp2,+wp3]});
+    if (r && r.ok) {
+      toast('✓ Rellingen gespeichert!');
+      ['rel-wasser','rel-allg','rel-wp1','rel-wp2','rel-wp3'].forEach(id=>document.getElementById(id).value='');
+      document.getElementById('rel-date').value = today();
+    } else {
+      toast('Fehler: ' + (r?.error || 'Unbekannt'), 'err');
+    }
+  } catch(e) {
+    toast('Netzwerkfehler – Datei lokal in Safari öffnen!', 'err');
+  }
+}
+
+// ── Save SPO ──────────────────────────────────────────────────────────────────
+async function saveSPO() {
+  const date  = document.getElementById('spo-date').value;
+  const strom = document.getElementById('spo-strom').value;
+  const warm  = document.getElementById('spo-warm').value;
+  const kalt  = document.getElementById('spo-kalt').value;
+  if (!date||!strom||!warm||!kalt) { toast('Bitte alle Felder ausfüllen','err'); return; }
+  toast('Speichern…');
+  try {
+    const r = await gasPost({sheet:'SPO', row:[date,+strom,+warm,+kalt]});
+    if (r && r.ok) {
+      toast('✓ SPO gespeichert!');
+      ['spo-strom','spo-warm','spo-kalt'].forEach(id=>document.getElementById(id).value='');
+      document.getElementById('spo-date').value = today();
+    } else {
+      toast('Fehler: ' + (r?.error || 'Unbekannt'), 'err');
+    }
+  } catch(e) {
+    toast('Netzwerkfehler – Datei lokal in Safari öffnen!', 'err');
+  }
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+async function loadAndRender() {
+  document.getElementById('chart-area').innerHTML = '<div class="hint">Lade Daten…</div>';
+  const loc = document.getElementById('chart-loc').value;
+  const data = await gasGet({action:'read', sheet:loc});
+  cachedData[loc] = Array.isArray(data) ? data : [];
+  updateYears();
+  renderCharts();
+}
+
+function updateYears() {
+  const loc  = document.getElementById('chart-loc').value;
+  const rows = cachedData[loc] || [];
+  const years = [...new Set(rows.map(r=>String(r[0]).slice(0,4)).filter(Boolean))].sort();
+  const sel  = document.getElementById('chart-year');
+  sel.innerHTML = '<option value="all">Alle Jahre</option>' + years.map(y=>`<option>${y}</option>`).join('');
+}
+
+function renderCharts() {
+  charts.forEach(c=>c.destroy()); charts=[];
+  const loc  = document.getElementById('chart-loc').value;
+  const year = document.getElementById('chart-year').value;
+  const raw  = (cachedData[loc]||[]).sort((a,b)=>String(a[0])>String(b[0])?1:-1);
+  const rows = year==='all' ? raw : raw.filter(r=>String(r[0]).startsWith(year));
+
+  if (rows.length < 2) {
+    document.getElementById('chart-area').innerHTML =
+      '<div class="hint">Noch keine Daten oder zu wenig Ablesungen (min. 2)</div>'; return;
+  }
+
+  const specs = loc==='Rellingen' ? [
+    {t:'Wasser',       col:1, u:'m³',  c:'#2563eb'},
+    {t:'Allgstrom',    col:2, u:'kWh', c:'#7c3aed'},
+    {t:'Wärmepumpe 1', col:3, u:'kWh', c:'#ea580c'},
+    {t:'Wärmepumpe 2', col:4, u:'kWh', c:'#d97706'},
+    {t:'Wärmepumpe 3', col:5, u:'kWh', c:'#16a34a'},
+  ] : [
+    {t:'Strom',      col:1, u:'kWh', c:'#16a34a'},
+    {t:'Warmwasser', col:2, u:'m³',  c:'#f59e0b'},
+    {t:'Kaltwasser', col:3, u:'m³',  c:'#0ea5e9'},
+  ];
+
+  let html = '';
+  specs.forEach((_,i) => {
+    html += `<div class="chart-card"><div class="ct">${specs[i].t} – Zählerstand</div><div class="csub">${specs[i].u}</div><canvas id="ca${i}"></canvas></div>`;
+    html += `<div class="chart-card"><div class="ct">${specs[i].t} – Verbrauch</div><div class="csub">pro Ablesung (${specs[i].u})</div><canvas id="cb${i}"></canvas></div>`;
+  });
+  if (loc==='Rellingen') html += `<div class="chart-card"><div class="ct">Gesamtstrom Rellingen</div><div class="csub">Allg + WP1+2+3 (kWh)</div><canvas id="ctotal"></canvas></div>`;
+  document.getElementById('chart-area').innerHTML = html;
+
+  const opts = {responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:45,font:{size:10}}},y:{ticks:{font:{size:10}}}}};
+
+  specs.forEach((s,i) => {
+    const labels = rows.map(r=>String(r[0]));
+    const vals   = rows.map(r=>parseFloat(r[s.col])||0);
+    const dL     = rows.slice(1).map(r=>String(r[0]));
+    const deltas = rows.slice(1).map((r,j)=>Math.max(0,(parseFloat(r[s.col])||0)-(parseFloat(rows[j][s.col])||0)));
+    charts.push(new Chart(document.getElementById('ca'+i),{type:'line',data:{labels,datasets:[{data:vals,borderColor:s.c,backgroundColor:s.c+'22',tension:.35,fill:true,pointRadius:4,pointBackgroundColor:s.c}]},options:JSON.parse(JSON.stringify(opts))}));
+    charts.push(new Chart(document.getElementById('cb'+i),{type:'bar',data:{labels:dL,datasets:[{data:deltas,backgroundColor:s.c+'cc',borderRadius:5}]},options:JSON.parse(JSON.stringify(opts))}));
+  });
+
+  if (loc==='Rellingen') {
+    const labels = rows.map(r=>String(r[0]));
+    const totals = rows.map(r=>[2,3,4,5].reduce((s,c)=>s+(parseFloat(r[c])||0),0));
+    charts.push(new Chart(document.getElementById('ctotal'),{type:'line',data:{labels,datasets:[{data:totals,borderColor:'#7c3aed',backgroundColor:'#7c3aed22',tension:.35,fill:true,pointRadius:4,pointBackgroundColor:'#7c3aed'}]},options:JSON.parse(JSON.stringify(opts))}));
+  }
+}
+</script>
+</body>
+</html>
